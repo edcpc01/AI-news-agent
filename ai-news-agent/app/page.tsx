@@ -1,12 +1,33 @@
 "use client";
 import { useState } from 'react';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function Home() {
   const [numero, setNumero] = useState("");
+  const [status, setStatus] = useState("ocioso"); // ocioso, carregando, sucesso, erro
 
-  const salvarConfiguracao = (e: React.FormEvent) => {
+  const salvarConfiguracao = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Número ${numero} salvo com sucesso para receber as notícias!`);
+    setStatus("carregando");
+
+    try {
+      // Cria uma "pasta" chamada usuarios e salva o número lá dentro
+      await addDoc(collection(db, "usuarios"), {
+        whatsapp: numero,
+        ativo: true,
+        dataCadastro: serverTimestamp()
+      });
+      
+      setStatus("sucesso");
+      setNumero(""); // Limpa o campo
+      
+      // Volta ao normal depois de 3 segundos
+      setTimeout(() => setStatus("ocioso"), 3000);
+    } catch (error) {
+      console.error("Erro ao salvar: ", error);
+      setStatus("erro");
+    }
   };
 
   return (
@@ -36,10 +57,18 @@ export default function Home() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg"
+            disabled={status === "carregando"}
+            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
           >
-            Salvar Configuração
+            {status === "carregando" ? "Salvando..." : "Salvar Configuração"}
           </button>
+
+          {status === "sucesso" && (
+            <p className="text-green-600 text-center font-medium mt-2">✅ Número salvo com sucesso!</p>
+          )}
+          {status === "erro" && (
+            <p className="text-red-600 text-center font-medium mt-2">❌ Erro ao salvar. Tente novamente.</p>
+          )}
         </form>
 
         <div className="mt-10 border-t border-slate-200 pt-6">
